@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<!--
+Autor: J. Patricio Hijuitl C.
+-->
+<html lang="en">
+    <head>
+        <title>Sistema Solar - Practica 1 - Aplicaciones Multimedia</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                font-family: Monospace;
+                background-color: #000;
+                margin: 0px;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    <body>
+
+        <!-- THREE.min.js r60 and FPS stats -->
+        <script src="js/THREE-r69.min.js"></script>
+        
+        <!-- ShaderParticles -->
+        <script src="particle/ShaderParticleUtils.js"></script>
+        <script src="particle/ShaderParticleGroup.js"></script>
+        <script src="particle/ShaderParticleEmitter.js"></script>
+
+        <script src="js/three.min.js"></script>
+        <script src="js/libs/stats.min.js"></script>
+        <script src="js/controls/OrbitControls.js"></script>
+
+        <script src="my/elipse.js"></script>
+
+        <script>
+        
+        // constantes que definen la forma de la elipse
+            const ME_B = 227, ME_A = 350;
+            const VE_B = 455, VE_A = 700;
+            const TI_B = 715, TI_A = 1100;
+
+            var elip_me, elip_ve, elip_ti;
+
+            var container, stats, clock, camera, scene, renderer;
+
+            // Usado en  initParticles()
+            var emitter, particleGroup, atmosphereBurnEmitter;
+
+            // meteorito
+            var asteroid, asteroidRadius = 20,
+                emitterPositionSpread = asteroidRadius * 2;
+
+            function init() {
+
+                container = document.createElement( 'div' );
+                document.body.appendChild( container );
+
+                camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 5000 );
+                camera.position.y = -2000;
+
+                scene = new THREE.Scene();
+                camera.lookAt( scene.position );
+
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.setClearColor(0x000000);
+
+                stats = new Stats();
+                clock = new THREE.Clock();
+
+                scene.add( new THREE.AmbientLight( 0x404040 ) );
+
+                var light = new THREE.DirectionalLight( 0xffffff);
+                light.position.set( 0, 0, 1 );
+                scene.add( light );
+
+                var light = new THREE.DirectionalLight( 0xffffff );
+                light.position.set( 0, 0, -1 );
+                scene.add( light );
+
+                container.appendChild( renderer.domElement );
+
+                stats.domElement.style.position = 'absolute';
+                stats.domElement.style.top = '0px';
+                container.appendChild( stats.domElement );
+
+                elip_me = new Elipse(ME_A, ME_B,0.015);
+                elip_ve = new Elipse(VE_A, VE_B,0.010);
+                elip_ti = new Elipse(TI_A, TI_B,0.005);
+                elip_met = new Elipse(1250, 350,0.005);
+
+                controls = new THREE.OrbitControls( camera, render.domElement );
+
+                window.addEventListener( 'resize', onWindowResize, false );
+
+            }
+
+            function createAsteroid() {
+                var geometry = new THREE.SphereGeometry( asteroidRadius, 32, 32 ),
+                    material = new THREE.MeshPhongMaterial();
+            
+                asteroid = new THREE.Mesh( geometry, material );
+                scene.add( asteroid );
+            }
+
+            // Create particle group and emitter
+            function initParticles() {
+                particleGroup = new SPE.Group({
+                    texture: THREE.ImageUtils.loadTexture('./textures/smokeparticle.png'),
+                    maxAge: 2,
+                    depthWrite: 0,
+                    depthTest: 0,
+                    transparent: 1
+                });
+
+                emitter = new SPE.Emitter({
+                type: 'cube',
+
+                radius: asteroidRadius * 1.2,
+
+                position: new THREE.Vector3(0, 0, 400),
+                positionSpread: new THREE.Vector3( emitterPositionSpread, emitterPositionSpread, emitterPositionSpread ),
+
+                acceleration: new THREE.Vector3(20, 0, 0),
+                accelerationSpread: new THREE.Vector3( 0, 0, 0 ),
+
+                velocity: new THREE.Vector3(0, 0, 0),
+                velocitySpread: new THREE.Vector3(0, 0, 0),
+
+                // Color tests
+                colorStart: new THREE.Color( 'white' ),
+                colorStartSpread: new THREE.Vector3(0, 0, 0),
+
+                colorMiddle: new THREE.Color( 'yellow' ),
+                colorMiddleSpread: new THREE.Vector3(0, 0, 0),
+
+                colorEnd: new THREE.Color( 'red' ),
+                colorEndSpread: new THREE.Vector3(0, 0, 0),
+
+                // Size tests
+                sizeStart: asteroidRadius,
+                sizeStartSpread: 0,
+
+                sizeMiddle: 30,
+                sizeMiddleSpread: 0,
+
+                sizeEnd: 0,
+                sizeEndSpread: 0,
+
+                // Opacity tests
+                opacityStart: 0,
+                opacityStartSpread: 0,
+
+                opacityMiddle: 0,
+                opacityMiddleSpread: 1,
+
+                opacityEnd: 1,
+                opacityEndSpread: 0,
+
+                particleCount: 2000,
+                    
+                    // Angle tests
+                    // angleStart: Math.PI * 0.5,
+                    // angleStartSpread: Math.PI * 2,
+                    
+                    // angleMiddle: 0,
+                    // angleMiddleSpread: Math.PI * 2,
+                    
+                    // angleEnd: Math.PI * 1.5,
+                    // angleEndSpread: Math.PI * 1.5
+                });
+
+
+                /*atmosphereBurnEmitter = new SPE.Emitter({
+                    type: 'sphere',
+                    position: new THREE.Vector3(0, -asteroidRadius * 1.2, 0 ),
+                    acceleration: new THREE.Vector3( 0, 1, 0 ),
+                    velocitySpread: new THREE.Vector3( 10, 0, 0 ),
+                    particleCount: 1000
+                });*/
+
+                particleGroup.addEmitter( emitter );
+                //particleGroup.addEmitter( atmosphereBurnEmitter );
+                
+                scene.add( particleGroup.mesh );
+                
+                //document.querySelector('.numParticles').textContent =
+                //    'Total particles: ' + emitter.particleCount;
+            }
+
+            function updateCamera() {
+                var now = Date.now() * 0.001;
+            
+                camera.position.x = Math.sin( now ) * 100;
+                camera.position.z = Math.cos( now ) * 100;
+            
+                camera.lookAt( scene.position );
+            }
+
+
+            function crearMeteoro(){
+                                // meteorito //////////////
+                var map = THREE.ImageUtils.loadTexture( './textures/sol.jpg' );
+                map.wrapS = map.wrapT = THREE.RepeatWrapping;
+                map.anisotropy = 16;
+                var material = new THREE.MeshLambertMaterial( { ambient: 0xbbbbbb, map: map, side: THREE.DoubleSide } );
+                meteoro = new THREE.Mesh( new THREE.SphereGeometry( 10, 20, 20 ), material );
+
+                scene.add( meteoro );
+            }
+
+
+            function crearPlanetas(){
+
+                // sol
+                var map = THREE.ImageUtils.loadTexture( './textures/sol.jpg' );
+                map.wrapS = map.wrapT = THREE.RepeatWrapping;
+                map.anisotropy = 16;
+                var material = new THREE.MeshLambertMaterial( { ambient: 0xbbbbbb, map: map, side: THREE.DoubleSide } );
+                sol = new THREE.Mesh( new THREE.SphereGeometry( 190, 20, 20 ), material );
+                //object.position.set( -400, 0, 200 );
+                scene.add( sol );
+
+
+                // mercurio //////////////
+                var map = THREE.ImageUtils.loadTexture( './textures/mercurio.jpg' );
+                map.wrapS = map.wrapT = THREE.RepeatWrapping;
+                map.anisotropy = 16;
+                var material = new THREE.MeshLambertMaterial( { ambient: 0xbbbbbb, map: map, side: THREE.DoubleSide } );
+                mercurio = new THREE.Mesh( new THREE.SphereGeometry( 30, 20, 20 ), material );
+                scene.add( mercurio );
+
+                var material = new THREE.LineBasicMaterial({color:0xffffff, opacity:1});
+                var ellipse = new THREE.EllipseCurve(0, 0, ME_A, ME_B, 0, 2.0 * Math.PI, false);
+                var ellipsePath = new THREE.CurvePath();
+                ellipsePath.add(ellipse);
+                var ellipseGeometry = ellipsePath.createPointsGeometry(100);
+                ellipseGeometry.computeTangents();
+                var line = new THREE.Line(ellipseGeometry, material);
+                scene.add( line );
+
+                // venus //////////////
+                var map = THREE.ImageUtils.loadTexture( './textures/venus.jpg' );
+                map.wrapS = map.wrapT = THREE.RepeatWrapping;
+                map.anisotropy = 16;
+                var material = new THREE.MeshLambertMaterial( { ambient: 0xbbbbbb, map: map, side: THREE.DoubleSide } );
+                venus = new THREE.Mesh( new THREE.SphereGeometry( 65, 20, 20 ), material );
+                //venus.position.set( -700, 0, 0 );
+                scene.add( venus );
+
+                var material = new THREE.LineBasicMaterial({color:0xffffff, opacity:1});
+                var ellipse = new THREE.EllipseCurve(0, 0, VE_A, VE_B, 0, 2.0 * Math.PI, false);
+                var ellipsePath = new THREE.CurvePath();
+                ellipsePath.add(ellipse);
+                var ellipseGeometry = ellipsePath.createPointsGeometry(100);
+                ellipseGeometry.computeTangents();
+                var line = new THREE.Line(ellipseGeometry, material);
+                scene.add( line );
+
+
+                // tierra //////////////
+                var map = THREE.ImageUtils.loadTexture( 'textures/land_ocean_ice_cloud_2048.jpg' );
+                map.wrapS = map.wrapT = THREE.RepeatWrapping;
+                map.anisotropy = 16;
+                var material = new THREE.MeshLambertMaterial( { ambient: 0xbbbbbb, map: map, side: THREE.DoubleSide } );
+                tierra = new THREE.Mesh( new THREE.SphereGeometry( 60, 20, 20 ), material );
+                scene.add( tierra );
+
+                var material = new THREE.LineBasicMaterial({color:0xffffff, opacity:1});
+                var ellipse = new THREE.EllipseCurve(0, 0, TI_A, TI_B, 0, 2.0 * Math.PI, false);
+                var ellipsePath = new THREE.CurvePath();
+                ellipsePath.add(ellipse);
+                var ellipseGeometry = ellipsePath.createPointsGeometry(100);
+                ellipseGeometry.computeTangents();
+                var line = new THREE.Line(ellipseGeometry, material);
+                scene.add( line );
+        
+            }
+
+            function estrellas(){
+                // create the particle variables
+                var particleCount = 500,
+                    particles = new THREE.Geometry(),
+                    pMaterial = new THREE.ParticleBasicMaterial({
+                      color: 0xFFFFFF,
+                      size: 20,
+                      map: THREE.ImageUtils.loadTexture('textures/particle.png'),
+                      blending: THREE.AdditiveBlending,
+                      transparent: true
+                    });
+                
+                // now create the individual particles
+                for (var p = 0; p < particleCount; p++) {
+                
+                  // create a particle with random
+                  // position values, -250 -> 250
+                  var pX = Math.random() * 3000 - 1500,
+                      pY = Math.random() * 3000 - 1500,
+                      pZ = Math.random() * 3000 - 1500,
+                      particle = new THREE.Vector3(pX, pY, pZ);
+                
+                  // add it to the geometry
+                  particles.vertices.push(particle);
+                }
+                
+                // create the particle system
+                particleSystem = new THREE.ParticleSystem(particles, pMaterial);
+                particleSystem.sortParticles = true;
+                // add it to the scene
+                scene.add(particleSystem);
+            }
+
+
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+            }
+
+
+            function animate() {
+                requestAnimationFrame( animate );          
+                render( clock.getDelta() );
+                //updateCamera();
+                stats.update();
+            }
+
+
+
+            function render(dt) {
+
+                var timer = Date.now() * 0.0001;
+
+                particleGroup.tick( dt );
+
+
+                //camera.position.x = Math.cos( timer ) * 800;
+                //camera.position.z = Math.sin( timer ) * 800;
+                //camera.lookAt( scene.position );
+                
+                elip_me.actualiza();
+                mercurio.position.set( elip_me.x, elip_me.z,0 );
+                elip_ve.actualiza();
+                venus.position.set( elip_ve.x, elip_ve.z,0 );
+                elip_ti.actualiza();
+                tierra.position.set( elip_ti.x, elip_ti.z,0 );
+                elip_met.actualiza();
+                meteoro.position.set( elip_met.x, 0,elip_met.z );
+
+                emitter.position = new THREE.Vector3(elip_met.x, 0,elip_met.z);
+                if (elip_met.cuadrante == 1 || elip_met.cuadrante == 2 )
+                    emitter.acceleration = new THREE.Vector3(20, 0, 0);
+                if (elip_met.cuadrante == 3 || elip_met.cuadrante == 4 )
+                    emitter.acceleration = new THREE.Vector3(-20, 0, 0);
+
+                for ( var i = 0, l = scene.children.length; i < l; i ++ ) {
+
+                    var object = scene.children[ i ];
+
+                    //object.rotation.x = timer * 5;
+                    tierra.rotation.y = timer * 2.5;
+                    mercurio.rotation.y = timer * 2.5;
+                    venus.rotation.y = timer * 2.5;
+
+                }
+
+               // add some rotation to the system
+               // particleSystem.rotation.y += 0.01;
+                // draw
+                renderer.render(scene, camera);
+
+            }
+
+            init();
+            initParticles();
+
+            setTimeout(animate, 0);
+            crearPlanetas();
+            crearMeteoro();
+            estrellas();
+            animate();
+
+            //createAsteroid();
+
+        
+
+        </script>
+
+    </body>
+</html>
